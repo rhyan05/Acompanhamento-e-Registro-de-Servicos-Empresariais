@@ -1,7 +1,7 @@
 import { Router, Response } from 'express'
 import { AuthRequest, authMiddleware } from '../middleware/auth.js'
 import { getMetricas, getAndamento } from '../services/metricasService.js'
-import { assertAcessoOperacao } from '../services/acesso.js'
+import { assertAcessoOperacao, escopoOperacoes } from '../services/acesso.js'
 import { responderErro } from './httpError.js'
 
 const router = Router()
@@ -11,7 +11,8 @@ router.get('/', async (req: AuthRequest, res: Response) => {
   try {
     const { periodo, operacaoId } = req.query as { periodo?: string; operacaoId?: string }
     if (operacaoId) await assertAcessoOperacao(operacaoId, req.userId!, req.empresaId!, req.userLevel!)
-    return res.json(await getMetricas(req.empresaId!, periodo, operacaoId))
+    const ids = operacaoId ? null : await escopoOperacoes(req.userId!, req.empresaId!, req.userLevel!)
+    return res.json(await getMetricas(req.empresaId!, periodo, operacaoId, ids))
   } catch (err) {
     return responderErro(err, res)
   }
@@ -21,7 +22,8 @@ router.get('/andamento', async (req: AuthRequest, res: Response) => {
   try {
     const { operacaoId } = req.query as { operacaoId?: string }
     if (operacaoId) await assertAcessoOperacao(operacaoId, req.userId!, req.empresaId!, req.userLevel!)
-    return res.json(await getAndamento(req.empresaId!, operacaoId))
+    const ids = operacaoId ? null : await escopoOperacoes(req.userId!, req.empresaId!, req.userLevel!)
+    return res.json(await getAndamento(req.empresaId!, operacaoId, ids))
   } catch (err) {
     return responderErro(err, res)
   }

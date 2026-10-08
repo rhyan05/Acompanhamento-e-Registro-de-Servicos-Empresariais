@@ -22,9 +22,10 @@ function periodoFiltro(periodo?: string) {
   return {}
 }
 
-export async function getMetricas(empresaId: string, periodo?: string, operacaoId?: string) {
+export async function getMetricas(empresaId: string, periodo?: string, operacaoId?: string, operacaoIds?: string[] | null) {
   const where: any = { deletedAt: null, operacao: { empresaId }, ...periodoFiltro(periodo) }
   if (operacaoId) where.operacaoId = operacaoId
+  else if (operacaoIds) where.operacaoId = { in: operacaoIds }
 
   const [totalAtividades, porStatus, porPrioridade, concluidas, abertas] = await Promise.all([
     prisma.atividade.count({ where }),
@@ -65,7 +66,7 @@ export async function getMetricas(empresaId: string, periodo?: string, operacaoI
     where: {
       acaoExecutada: 'mudanca_status',
       alteracaoEstado: { endsWith: '→ revisao' },
-      atividade: { operacao: { empresaId }, ...(operacaoId ? { operacaoId } : {}) },
+      atividade: { operacao: { empresaId }, ...(operacaoId ? { operacaoId } : operacaoIds ? { operacaoId: { in: operacaoIds } } : {}) },
     },
   })
 
@@ -81,9 +82,10 @@ export async function getMetricas(empresaId: string, periodo?: string, operacaoI
   }
 }
 
-export async function getAndamento(empresaId: string, operacaoId?: string) {
+export async function getAndamento(empresaId: string, operacaoId?: string, operacaoIds?: string[] | null) {
+  const escopo = operacaoId ? { operacaoId } : operacaoIds ? { operacaoId: { in: operacaoIds } } : {}
   const atividades = await prisma.atividade.findMany({
-    where: { deletedAt: null, operacao: { empresaId }, ...(operacaoId ? { operacaoId } : {}) },
+    where: { deletedAt: null, operacao: { empresaId }, ...escopo },
     select: {
       status: true,
       operacaoId: true,
@@ -121,7 +123,7 @@ export async function getAndamento(empresaId: string, operacaoId?: string) {
   }))
 
   const fluxos = await prisma.fluxo.findMany({
-    where: { operacao: { empresaId }, ...(operacaoId ? { operacaoId } : {}) },
+    where: { operacao: { empresaId }, ...escopo },
     include: {
       etapas: { orderBy: { ordem: 'asc' }, include: { equipe: { select: { nome: true } } } },
     },
