@@ -2,9 +2,10 @@ import { prisma } from '../database/prisma.js'
 import { AppError } from './errors.js'
 import { assertOperacaoDaEmpresa } from './acesso.js'
 
-export async function listarFluxos(empresaId: string, operacaoId?: string) {
+export async function listarFluxos(empresaId: string, operacaoId?: string, operacaoIds?: string[] | null) {
   const where: any = { operacao: { empresaId } }
   if (operacaoId) where.operacaoId = operacaoId
+  else if (operacaoIds) where.operacaoId = { in: operacaoIds }
   return prisma.fluxo.findMany({
     where,
     orderBy: { nome: 'asc' },

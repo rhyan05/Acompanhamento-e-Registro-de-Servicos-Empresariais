@@ -2,6 +2,7 @@ import { Router, Response } from 'express'
 import { z } from 'zod'
 import { AuthRequest, authMiddleware, gestorOnly } from '../middleware/auth.js'
 import { listarFluxos, criarFluxo, adicionarEtapa, removerEtapa } from '../services/fluxoService.js'
+import { assertAcessoOperacao, escopoOperacoes } from '../services/acesso.js'
 import { responderErro } from './httpError.js'
 
 const router = Router()
@@ -17,7 +18,9 @@ const fluxoSchema = z.object({
 router.get('/', async (req: AuthRequest, res: Response) => {
   try {
     const { operacaoId } = req.query as { operacaoId?: string }
-    return res.json(await listarFluxos(req.empresaId!, operacaoId))
+    if (operacaoId) await assertAcessoOperacao(operacaoId, req.userId!, req.empresaId!, req.userLevel!)
+    const ids = operacaoId ? null : await escopoOperacoes(req.userId!, req.empresaId!, req.userLevel!)
+    return res.json(await listarFluxos(req.empresaId!, operacaoId, ids))
   } catch (err) {
     return responderErro(err, res)
   }
