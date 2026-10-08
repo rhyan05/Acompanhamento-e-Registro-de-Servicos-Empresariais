@@ -16,6 +16,15 @@ export async function operacoesAcessiveis(
   return { todas: false, ids: membros.map(m => m.operacaoId) }
 }
 
+export async function escopoOperacoes(
+  userId: string,
+  empresaId: string,
+  nivel: string
+): Promise<string[] | null> {
+  const { todas, ids } = await operacoesAcessiveis(userId, empresaId, nivel)
+  return todas ? null : ids
+}
+
 export async function assertOperacaoDaEmpresa(operacaoId: string, empresaId: string) {
   const operacao = await prisma.operacao.findFirst({ where: { id: operacaoId, empresaId } })
   if (!operacao) throw new AppError('Operação não encontrada', 404)

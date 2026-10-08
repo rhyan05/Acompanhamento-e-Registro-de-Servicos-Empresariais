@@ -1,7 +1,7 @@
 import { prisma } from '../database/prisma.js'
 import { AppError } from './errors.js'
 import { diferenciarEdicao } from './edicaoCalculos.js'
-import { assertAcessoOperacao, assertOperacaoDaEmpresa, operacoesAcessiveis } from './acesso.js'
+import { assertAcessoOperacao, operacoesAcessiveis } from './acesso.js'
 
 const includeCard = {
   responsavel: { select: { id: true, nome: true, email: true } },
@@ -104,11 +104,13 @@ export async function listarAtividades(
   })
 }
 
-export async function buscarAtividade(id: string, empresaId: string) {
-  return prisma.atividade.findFirst({
+export async function buscarAtividade(id: string, empresaId: string, userId: string, nivel: string) {
+  const atividade = await prisma.atividade.findFirst({
     where: { id, deletedAt: null, operacao: { empresaId } },
     include: includeDetalhe,
   })
+  if (atividade) await assertAcessoOperacao(atividade.operacaoId, userId, empresaId, nivel)
+  return atividade
 }
 
 export interface AtividadeInput {
@@ -123,7 +125,7 @@ export interface AtividadeInput {
   etapaAtualId?: string
 }
 
-export async function criarAtividade(data: AtividadeInput, userId: string, empresaId: string) {
+export async function criarAtividade(data: AtividadeInput, userId: string, empresaId: string, nivel: string) {
   let operacaoId = data.operacaoId ?? null
   let equipeId: string | null = null
   let etapaAtualId: string | null = data.etapaAtualId ?? null
@@ -142,7 +144,7 @@ export async function criarAtividade(data: AtividadeInput, userId: string, empre
   }
 
   if (!operacaoId) throw new AppError('Informe a operação')
-  await assertOperacaoDaEmpresa(operacaoId, empresaId)
+  await assertAcessoOperacao(operacaoId, userId, empresaId, nivel)
 
   if (!responsavelId) throw new AppError('Informe o responsável')
   if (!equipeId) {
@@ -192,14 +194,15 @@ export interface EdicaoInput {
   prazoEstimado?: string | null
 }
 
-async function acharAtividade(id: string, empresaId: string) {
+async function acharAtividade(id: string, empresaId: string, userId: string, nivel: string) {
   const atividade = await prisma.atividade.findFirst({ where: { id, deletedAt: null, operacao: { empresaId } } })
   if (!atividade) throw new AppError('Atividade não encontrada', 404)
+  await assertAcessoOperacao(atividade.operacaoId, userId, empresaId, nivel)
   return atividade
 }
 
-export async function editarAtividade(id: string, dados: EdicaoInput, userId: string, empresaId: string) {
-  const atual = await acharAtividade(id, empresaId)
+export async function editarAtividade(id: string, dados: EdicaoInput, userId: string, empresaId: string, nivel: string) {
+  const atual = await acharAtividade(id, empresaId, userId, nivel)
   const { data, logs } = diferenciarEdicao(atual as any, dados)
 
   if (Object.keys(data).length === 0) {
@@ -213,8 +216,8 @@ export async function editarAtividade(id: string, dados: EdicaoInput, userId: st
   return atividade
 }
 
-export async function atualizarStatus(id: string, status: string, userId: string, empresaId: string) {
-  const atual = await acharAtividade(id, empresaId)
+export async function atualizarStatus(id: string, status: string, userId: string, empresaId: string, nivel: string) {
+  const atual = await acharAtividade(id, empresaId, userId, nivel)
 
   const agora = new Date()
   const data: any = { status }
@@ -238,12 +241,13 @@ export async function atualizarStatus(id: string, status: string, userId: string
   return atividade
 }
 
-async function moverEtapa(id: string, userId: string, empresaId: string, direcao: 1 | -1) {
+async function moverEtapa(id: string, userId: string, empresaId: string, nivel: string, direcao: 1 | -1) {
   const atividade = await prisma.atividade.findFirst({
     where: { id, deletedAt: null, operacao: { empresaId } },
     include: { etapaAtual: true, fluxo: { include: { etapas: { orderBy: { ordem: 'asc' } } } } },
   })
   if (!atividade) throw new AppError('Atividade não encontrada', 404)
+  await assertAcessoOperacao(atividade.operacaoId, userId, empresaId, nivel)
   if (!atividade.fluxo || !atividade.etapaAtual) throw new AppError('Atividade não pertence a um fluxo')
 
   if (direcao === 1 && atividade.status !== 'concluido') {
@@ -294,16 +298,16 @@ async function moverEtapa(id: string, userId: string, empresaId: string, direcao
   return updated
 }
 
-export function avancarEtapa(id: string, userId: string, empresaId: string) {
-  return moverEtapa(id, userId, empresaId, 1)
+export function avancarEtapa(id: string, userId: string, empresaId: string, nivel: string) {
+  return moverEtapa(id, userId, empresaId, nivel, 1)
 }
 
-export function retornarEtapa(id: string, userId: string, empresaId: string) {
-  return moverEtapa(id, userId, empresaId, -1)
+export function retornarEtapa(id: string, userId: string, empresaId: string, nivel: string) {
+  return moverEtapa(id, userId, empresaId, nivel, -1)
 }
 
-export async function adicionarResponsavel(atividadeId: string, usuarioId: string, userId: string, empresaId: string) {
-  await acharAtividade(atividadeId, empresaId)
+export async function adicionarResponsavel(atividadeId: string, usuarioId: string, userId: string, empresaId: string, nivel: string) {
+  await acharAtividade(atividadeId, empresaId, userId, nivel)
   const usuario = await prisma.usuario.findFirst({ where: { id: usuarioId, empresaId } })
   if (!usuario) throw new AppError('Usuário não pertence à empresa')
 
@@ -313,11 +317,11 @@ export async function adicionarResponsavel(atividadeId: string, usuarioId: strin
     create: { atividadeId, usuarioId },
   })
   await registrarHistorico(atividadeId, userId, 'edicao', { campo: 'responsaveis', valorNovo: usuario.nome })
-  return buscarAtividade(atividadeId, empresaId)
+  return buscarAtividade(atividadeId, empresaId, userId, nivel)
 }
 
-export async function removerResponsavel(atividadeId: string, usuarioId: string, userId: string, empresaId: string) {
-  const atividade = await acharAtividade(atividadeId, empresaId)
+export async function removerResponsavel(atividadeId: string, usuarioId: string, userId: string, empresaId: string, nivel: string) {
+  const atividade = await acharAtividade(atividadeId, empresaId, userId, nivel)
   const total = await prisma.atividadeResponsavel.count({ where: { atividadeId } })
   if (total <= 1) throw new AppError('A tarefa precisa de ao menos um responsável')
 
@@ -329,11 +333,11 @@ export async function removerResponsavel(atividadeId: string, usuarioId: string,
     }
   }
   await registrarHistorico(atividadeId, userId, 'edicao', { campo: 'responsaveis', valorAnterior: usuarioId })
-  return buscarAtividade(atividadeId, empresaId)
+  return buscarAtividade(atividadeId, empresaId, userId, nivel)
 }
 
-export async function excluirAtividade(id: string, userId: string, empresaId: string) {
-  await acharAtividade(id, empresaId)
+export async function excluirAtividade(id: string, userId: string, empresaId: string, nivel: string) {
+  await acharAtividade(id, empresaId, userId, nivel)
   await registrarHistorico(id, userId, 'exclusao')
   return prisma.atividade.update({ where: { id }, data: { deletedAt: new Date() } })
 }

@@ -63,7 +63,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
 
 router.get('/:id', async (req: AuthRequest, res: Response) => {
   try {
-    const atividade = await buscarAtividade(req.params.id as string, req.empresaId!)
+    const atividade = await buscarAtividade(req.params.id as string, req.empresaId!, req.userId!, req.userLevel!)
     if (!atividade) return res.status(404).json({ error: 'Atividade não encontrada' })
     return res.json(atividade)
   } catch (err) {
@@ -74,7 +74,7 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
 router.post('/', async (req: AuthRequest, res: Response) => {
   try {
     const data = createSchema.parse(req.body)
-    return res.status(201).json(await criarAtividade(data, req.userId!, req.empresaId!))
+    return res.status(201).json(await criarAtividade(data, req.userId!, req.empresaId!, req.userLevel!))
   } catch (err) {
     return responderErro(err, res)
   }
@@ -83,7 +83,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
 router.patch('/:id', async (req: AuthRequest, res: Response) => {
   try {
     const data = edicaoSchema.parse(req.body)
-    return res.json(await editarAtividade(req.params.id as string, data, req.userId!, req.empresaId!))
+    return res.json(await editarAtividade(req.params.id as string, data, req.userId!, req.empresaId!, req.userLevel!))
   } catch (err) {
     return responderErro(err, res)
   }
@@ -92,7 +92,7 @@ router.patch('/:id', async (req: AuthRequest, res: Response) => {
 router.patch('/:id/status', async (req: AuthRequest, res: Response) => {
   try {
     const { status } = statusSchema.parse(req.body)
-    return res.json(await atualizarStatus(req.params.id as string, status, req.userId!, req.empresaId!))
+    return res.json(await atualizarStatus(req.params.id as string, status, req.userId!, req.empresaId!, req.userLevel!))
   } catch (err) {
     return responderErro(err, res)
   }
@@ -100,7 +100,7 @@ router.patch('/:id/status', async (req: AuthRequest, res: Response) => {
 
 router.post('/:id/avancar-etapa', async (req: AuthRequest, res: Response) => {
   try {
-    return res.json(await avancarEtapa(req.params.id as string, req.userId!, req.empresaId!))
+    return res.json(await avancarEtapa(req.params.id as string, req.userId!, req.empresaId!, req.userLevel!))
   } catch (err) {
     return responderErro(err, res)
   }
@@ -108,7 +108,7 @@ router.post('/:id/avancar-etapa', async (req: AuthRequest, res: Response) => {
 
 router.post('/:id/retornar-etapa', async (req: AuthRequest, res: Response) => {
   try {
-    return res.json(await retornarEtapa(req.params.id as string, req.userId!, req.empresaId!))
+    return res.json(await retornarEtapa(req.params.id as string, req.userId!, req.empresaId!, req.userLevel!))
   } catch (err) {
     return responderErro(err, res)
   }
@@ -119,7 +119,7 @@ const responsavelSchema = z.object({ usuarioId: z.string().uuid() })
 router.post('/:id/responsaveis', async (req: AuthRequest, res: Response) => {
   try {
     const { usuarioId } = responsavelSchema.parse(req.body)
-    return res.status(201).json(await adicionarResponsavel(req.params.id as string, usuarioId, req.userId!, req.empresaId!))
+    return res.status(201).json(await adicionarResponsavel(req.params.id as string, usuarioId, req.userId!, req.empresaId!, req.userLevel!))
   } catch (err) {
     return responderErro(err, res)
   }
@@ -127,7 +127,7 @@ router.post('/:id/responsaveis', async (req: AuthRequest, res: Response) => {
 
 router.delete('/:id/responsaveis/:usuarioId', async (req: AuthRequest, res: Response) => {
   try {
-    return res.json(await removerResponsavel(req.params.id as string, req.params.usuarioId as string, req.userId!, req.empresaId!))
+    return res.json(await removerResponsavel(req.params.id as string, req.params.usuarioId as string, req.userId!, req.empresaId!, req.userLevel!))
   } catch (err) {
     return responderErro(err, res)
   }
@@ -135,7 +135,7 @@ router.delete('/:id/responsaveis/:usuarioId', async (req: AuthRequest, res: Resp
 
 router.delete('/:id', gestorOnly, async (req: AuthRequest, res: Response) => {
   try {
-    await excluirAtividade(req.params.id as string, req.userId!, req.empresaId!)
+    await excluirAtividade(req.params.id as string, req.userId!, req.empresaId!, req.userLevel!)
     return res.status(204).send()
   } catch (err) {
     return responderErro(err, res)
