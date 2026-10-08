@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { AuthProvider } from '../context/AuthProvider'
@@ -136,6 +136,12 @@ function MobileTopBar({ onMenu }: { onMenu: () => void }) {
   )
 }
 
+function RequireGestor({ children }: { children: ReactNode }) {
+  const { usuario } = useAuth()
+  if (usuario?.nivelAcesso !== 'gestor') return <Navigate to="/" replace />
+  return <>{children}</>
+}
+
 function ProtectedLayout() {
   const { usuario } = useAuth()
   const [menu, setMenu] = useState(false)
@@ -181,7 +187,7 @@ export function AppRoutes() {
                 <Route path="operacoes" element={<OperacoesPage />} />
                 <Route path="operacoes/:operacaoId" element={<OperacaoPage />} />
                 <Route path="operacoes/:operacaoId/equipes/:equipeId" element={<EquipeKanbanPage />} />
-                <Route path="admin" element={<AdminPage />} />
+                <Route path="admin" element={<RequireGestor><AdminPage /></RequireGestor>} />
               </Route>
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
