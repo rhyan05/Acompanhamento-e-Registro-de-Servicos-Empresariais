@@ -46,7 +46,7 @@ const filtroSchema = z.object({
 router.get('/', async (req: AuthRequest, res: Response) => {
   try {
     const filtros = filtroSchema.parse(req.query)
-    return res.json(await listarCasos(req.empresaId!, filtros))
+    return res.json(await listarCasos(req.empresaId!, filtros, req.userId!, req.userLevel!))
   } catch (err) {
     return responderErro(err, res)
   }
@@ -54,7 +54,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
 
 router.get('/:id', async (req: AuthRequest, res: Response) => {
   try {
-    const caso = await buscarCaso(req.params.id as string, req.empresaId!)
+    const caso = await buscarCaso(req.params.id as string, req.empresaId!, req.userId!, req.userLevel!)
     if (!caso) return res.status(404).json({ error: 'Caso não encontrado' })
     return res.json(caso)
   } catch (err) {
@@ -65,7 +65,7 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
 router.post('/', async (req: AuthRequest, res: Response) => {
   try {
     const data = casoSchema.parse(req.body)
-    return res.status(201).json(await criarCaso(req.empresaId!, data, req.userId!))
+    return res.status(201).json(await criarCaso(req.empresaId!, data, req.userId!, req.userLevel!))
   } catch (err) {
     return responderErro(err, res)
   }
@@ -74,7 +74,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
 router.patch('/:id/status', async (req: AuthRequest, res: Response) => {
   try {
     const { status } = statusSchema.parse(req.body)
-    return res.json(await atualizarStatusCaso(req.empresaId!, req.params.id as string, status))
+    return res.json(await atualizarStatusCaso(req.empresaId!, req.params.id as string, status, req.userId!, req.userLevel!))
   } catch (err) {
     return responderErro(err, res)
   }
@@ -88,7 +88,9 @@ router.post('/:id/anexos', upload.single('arquivo'), async (req: AuthRequest, re
       req.params.id as string,
       req.file.originalname,
       `/uploads/${req.file.filename}`,
-      req.file.mimetype
+      req.file.mimetype,
+      req.userId!,
+      req.userLevel!
     )
     return res.status(201).json(anexo)
   } catch (err) {
