@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Backend - setup
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Backend - dependencias
+        run: npm ci
+        working-directory: backend
+      - name: Backend - prisma generate
+        run: npx prisma generate
+        working-directory: backend
+      - name: Backend - typecheck
+        run: npx tsc --noEmit
+        working-directory: backend
+      - name: Backend - testes
+        run: npm test
+        working-directory: backend
+
+      - name: Frontend - setup
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Organizador_Tarefa/package-lock.json
+      - name: Frontend - dependencias
+        run: npm ci
+        working-directory: Organizador_Tarefa
+      - name: Frontend - lint
+        run: npm run lint
+        working-directory: Organizador_Tarefa
+      - name: Frontend - build
+        run: npm run build
+        working-directory: Organizador_Tarefa
+
+  imagens:
+    if: github.event_name == 'push'
+    needs: validar
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Owner (lowercase)
+        id: owner
+        run: echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Login no GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build e push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ghcr.io/${{ steps.owner.outputs.owner }}/organizador-backend:latest
+            ghcr.io/${{ steps.owner.outputs.owner }}/organizador-backend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build e push web
+        uses: docker/build-push-action@v6
+        with:
+          context: ./Organizador_Tarefa
+          push: true
+          tags: |
+            ghcr.io/${{ steps.owner.outputs.owner }}/organizador-web:latest
+            ghcr.io/${{ steps.owner.outputs.owner }}/organizador-web:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
