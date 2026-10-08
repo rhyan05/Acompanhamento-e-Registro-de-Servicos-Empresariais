@@ -1,0 +1,297 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------------------------------------------------------------
+   Tokens de tema (claro / escuro)
+   --------------------------------------------------------------- */
+:root {
+  --background: #f4f6fb;
+  --surface: #ffffff;
+  --surface-muted: #f1f4fa;
+  --border: #e2e8f0;
+  --content: #0f172a;
+  --content-muted: #64748b;
+  --content-subtle: #94a3b8;
+
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-soft: #eef4ff;
+  --on-primary: #ffffff;
+
+  --sh-soft: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --sh-card: 0 6px 24px -10px rgba(15, 23, 42, 0.16);
+  --sh-pop: 0 24px 48px -16px rgba(15, 23, 42, 0.28);
+
+  /* Status */
+  --pendente: #92610a;      --pendente-soft: #fef7c3;
+  --execucao: #1d4ed8;      --execucao-soft: #dbeafe;
+  --revisao: #6d28d9;       --revisao-soft: #ede9fe;
+  --concluido: #15803d;     --concluido-soft: #dcfce7;
+  --bloqueado: #b91c1c;     --bloqueado-soft: #fee2e2;
+
+  /* Prioridade */
+  --prio-baixa: #475569;    --prio-baixa-soft: #e2e8f0;
+  --prio-media: #92610a;    --prio-media-soft: #fef7c3;
+  --prio-alta: #c2410c;     --prio-alta-soft: #ffedd5;
+  --prio-urgente: #b91c1c;  --prio-urgente-soft: #fee2e2;
+}
+
+.dark {
+  --background: #0a0f1c;
+  --surface: #121a2b;
+  --surface-muted: #182135;
+  --border: #26324a;
+  --content: #e8edf7;
+  --content-muted: #93a1bd;
+  --content-subtle: #64748b;
+
+  --primary: #3b82f6;
+  --primary-hover: #60a5fa;
+  --primary-soft: rgba(59, 130, 246, 0.14);
+  --on-primary: #ffffff;
+
+  --sh-soft: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --sh-card: 0 8px 28px -12px rgba(0, 0, 0, 0.55);
+  --sh-pop: 0 28px 56px -18px rgba(0, 0, 0, 0.7);
+
+  --pendente: #fcd34d;      --pendente-soft: rgba(234, 179, 8, 0.16);
+  --execucao: #93c5fd;      --execucao-soft: rgba(59, 130, 246, 0.18);
+  --revisao: #d8b4fe;       --revisao-soft: rgba(168, 85, 247, 0.18);
+  --concluido: #86efac;     --concluido-soft: rgba(34, 197, 94, 0.16);
+  --bloqueado: #fca5a5;     --bloqueado-soft: rgba(239, 68, 68, 0.18);
+
+  --prio-baixa: #cbd5e1;    --prio-baixa-soft: rgba(148, 163, 184, 0.16);
+  --prio-media: #fcd34d;    --prio-media-soft: rgba(234, 179, 8, 0.16);
+  --prio-alta: #fdba74;     --prio-alta-soft: rgba(249, 115, 22, 0.18);
+  --prio-urgente: #fca5a5;  --prio-urgente-soft: rgba(239, 68, 68, 0.18);
+}
+
+/* ---------------------------------------------------------------
+   Mapeamento para utilitários Tailwind
+   --------------------------------------------------------------- */
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
+  --color-content: var(--content);
+  --color-content-muted: var(--content-muted);
+  --color-content-subtle: var(--content-subtle);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-on-primary: var(--on-primary);
+
+  --color-pendente: var(--pendente);
+  --color-pendente-soft: var(--pendente-soft);
+  --color-execucao: var(--execucao);
+  --color-execucao-soft: var(--execucao-soft);
+  --color-revisao: var(--revisao);
+  --color-revisao-soft: var(--revisao-soft);
+  --color-concluido: var(--concluido);
+  --color-concluido-soft: var(--concluido-soft);
+  --color-bloqueado: var(--bloqueado);
+  --color-bloqueado-soft: var(--bloqueado-soft);
+
+  --color-prio-baixa: var(--prio-baixa);
+  --color-prio-baixa-soft: var(--prio-baixa-soft);
+  --color-prio-media: var(--prio-media);
+  --color-prio-media-soft: var(--prio-media-soft);
+  --color-prio-alta: var(--prio-alta);
+  --color-prio-alta-soft: var(--prio-alta-soft);
+  --color-prio-urgente: var(--prio-urgente);
+  --color-prio-urgente-soft: var(--prio-urgente-soft);
+
+  --shadow-soft: var(--sh-soft);
+  --shadow-card: var(--sh-card);
+  --shadow-pop: var(--sh-pop);
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --animate-fade-in: fade-in 0.2s ease-out both;
+  --animate-scale-in: scale-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-slide-up: slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------------------------------------------------------------
+   Base
+   --------------------------------------------------------------- */
+@layer base {
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-background text-content font-sans antialiased;
+    margin: 0;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--primary) 28%, transparent);
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 9999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--content-subtle);
+    background-clip: content-box;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* ---------------------------------------------------------------
+   Componentes reutilizáveis
+   --------------------------------------------------------------- */
+@layer components {
+  .card {
+    @apply bg-surface border border-border rounded-2xl shadow-soft;
+  }
+  .card-hover {
+    @apply transition duration-200 hover:-translate-y-0.5 hover:shadow-card hover:border-primary/40;
+  }
+  .panel {
+    @apply bg-surface border border-border rounded-2xl shadow-card;
+  }
+  .section-title {
+    @apply text-lg font-bold tracking-tight text-content;
+  }
+  .muted {
+    @apply text-content-muted text-sm;
+  }
+
+  /* Botões */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium
+      border border-transparent transition duration-150 outline-none
+      focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .btn-primary {
+    @apply bg-primary text-on-primary hover:bg-primary-hover shadow-soft;
+  }
+  .btn-secondary {
+    @apply bg-surface border-border text-content hover:bg-surface-muted;
+  }
+  .btn-ghost {
+    @apply text-content-muted hover:text-content hover:bg-surface-muted;
+  }
+  .btn-danger {
+    @apply text-bloqueado hover:bg-bloqueado-soft;
+  }
+  .btn-icon {
+    @apply p-2 rounded-xl border border-transparent text-content-muted hover:text-content hover:bg-surface-muted;
+  }
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs rounded-lg;
+  }
+
+  /* Formulários */
+  .label {
+    @apply block text-sm font-medium text-content-muted mb-1.5;
+  }
+  .input {
+    @apply w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-content
+      placeholder:text-content-subtle outline-none transition
+      focus:border-primary focus:ring-2 focus:ring-primary/20;
+  }
+  select.input {
+    @apply appearance-none bg-no-repeat pr-9 cursor-pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-position: right 0.65rem center;
+  }
+
+  /* Badges */
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap;
+  }
+
+  /* Navegação lateral */
+  .nav-link {
+    @apply flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium
+      text-content-muted transition duration-150
+      hover:bg-surface-muted hover:text-content;
+  }
+  .nav-link-active {
+    @apply bg-primary text-on-primary hover:bg-primary-hover hover:text-on-primary shadow-soft;
+  }
+
+  /* Abas */
+  .tab {
+    @apply px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors
+      border-transparent text-content-muted hover:text-content;
+  }
+  .tab-active {
+    @apply border-primary text-primary;
+  }
+
+  /* Pílulas de filtro */
+  .pill {
+    @apply px-3 py-1.5 rounded-full text-sm font-medium border border-border bg-surface text-content-muted
+      transition hover:text-content hover:border-primary/40;
+  }
+  .pill-active {
+    @apply bg-primary text-on-primary border-primary hover:text-on-primary;
+  }
+
+  /* Modais */
+  .modal-panel {
+    @apply bg-surface border border-border rounded-2xl shadow-pop w-full max-h-[90vh] overflow-y-auto animate-scale-in m-auto;
+  }
+  .modal-panel::backdrop {
+    background: rgba(2, 6, 24, 0.5);
+    backdrop-filter: blur(4px);
+  }
+
+  /* Tabelas */
+  .table-wrap {
+    @apply bg-surface border border-border rounded-2xl shadow-soft overflow-x-auto;
+  }
+  .table-wrap table {
+    @apply w-full;
+  }
+  .table-wrap thead th {
+    @apply text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-content-subtle bg-surface-muted;
+  }
+  .table-wrap tbody {
+    @apply divide-y divide-border;
+  }
+  .table-wrap tbody tr {
+    @apply hover:bg-surface-muted transition-colors;
+  }
+  .table-wrap tbody td {
+    @apply px-4 py-3 text-sm text-content;
+  }
+}

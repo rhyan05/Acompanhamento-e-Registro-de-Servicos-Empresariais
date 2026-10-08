@@ -1,0 +1,207 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Empresa {
+  id        String     @id @default(uuid())
+  nome      String
+  createdAt DateTime   @default(now())
+  usuarios  Usuario[]
+  operacoes Operacao[]
+}
+
+model Operacao {
+  id            String           @id @default(uuid())
+  empresaId     String
+  empresa       Empresa          @relation(fields: [empresaId], references: [id])
+  nome          String
+  descricao     String?
+  createdAt     DateTime         @default(now())
+  departamentos Departamento[]
+  fluxos        Fluxo[]
+  atividades    Atividade[]
+  casos         Caso[]
+  membros       OperacaoMembro[]
+
+  @@index([empresaId])
+}
+
+model OperacaoMembro {
+  id             String        @id @default(uuid())
+  operacaoId     String
+  operacao       Operacao      @relation(fields: [operacaoId], references: [id])
+  usuarioId      String
+  usuario        Usuario       @relation(fields: [usuarioId], references: [id])
+  departamentoId String?
+  departamento   Departamento? @relation(fields: [departamentoId], references: [id])
+  papel          String        @default("operacional")
+
+  @@unique([operacaoId, usuarioId])
+}
+
+model Usuario {
+  id            String        @id @default(uuid())
+  nome          String
+  email         String        @unique
+  senha         String
+  funcao        String
+  nivelAcesso   String        @default("operacional")
+  empresaId     String
+  empresa       Empresa       @relation(fields: [empresaId], references: [id])
+  createdAt     DateTime      @default(now())
+  membros       OperacaoMembro[]
+  atividades    Atividade[]   @relation("Responsavel")
+  participacoes AtividadeResponsavel[]
+  solicitacoes  Atividade[]   @relation("Solicitante")
+  criadas       Atividade[]   @relation("Criador")
+  movimentacoes MovimentacaoEtapa[]
+  casos         Caso[]
+}
+
+model Departamento {
+  id         String           @id @default(uuid())
+  operacaoId String
+  operacao   Operacao         @relation(fields: [operacaoId], references: [id])
+  nome       String
+  atividades Atividade[]
+  etapas     EtapaFluxo[]
+  casos      Caso[]
+  membros    OperacaoMembro[]
+
+  @@index([operacaoId])
+}
+
+model Fluxo {
+  id         String        @id @default(uuid())
+  operacaoId String
+  operacao   Operacao      @relation(fields: [operacaoId], references: [id])
+  nome       String
+  descricao  String?
+  createdAt  DateTime      @default(now())
+  etapas     EtapaFluxo[]
+  atividades Atividade[]
+
+  @@index([operacaoId])
+}
+
+model EtapaFluxo {
+  id         String              @id @default(uuid())
+  fluxoId    String
+  fluxo      Fluxo               @relation(fields: [fluxoId], references: [id])
+  nome       String
+  ordem      Int
+  equipeId   String
+  equipe     Departamento        @relation(fields: [equipeId], references: [id])
+  atividades Atividade[]         @relation("EtapaAtual")
+  movOrigem  MovimentacaoEtapa[] @relation("EtapaOrigem")
+  movDestino MovimentacaoEtapa[] @relation("EtapaDestino")
+
+  @@unique([fluxoId, ordem])
+}
+
+model Atividade {
+  id            String        @id @default(uuid())
+  operacaoId    String
+  operacao      Operacao      @relation(fields: [operacaoId], references: [id])
+  titulo        String
+  descricao     String?
+  responsavelId String
+  responsavel   Usuario       @relation("Responsavel", fields: [responsavelId], references: [id])
+  solicitanteId String?
+  solicitante   Usuario?      @relation("Solicitante", fields: [solicitanteId], references: [id])
+  criadoPorId   String?
+  criadoPor     Usuario?      @relation("Criador", fields: [criadoPorId], references: [id])
+  equipeId      String?
+  equipe        Departamento? @relation(fields: [equipeId], references: [id])
+  fluxoId       String?
+  fluxo         Fluxo?        @relation(fields: [fluxoId], references: [id])
+  etapaAtualId  String?
+  etapaAtual    EtapaFluxo?   @relation("EtapaAtual", fields: [etapaAtualId], references: [id])
+  status        String        @default("pendente")
+  prioridade    String        @default("media")
+  prazoEstimado DateTime?
+  dataInicio    DateTime?
+  dataConclusao DateTime?
+  tempoGastoMin Int?
+  createdAt     DateTime      @default(now())
+  deletedAt     DateTime?
+  historico     Historico[]
+  movimentacoes MovimentacaoEtapa[]
+  casos         Caso[]
+  responsaveis  AtividadeResponsavel[]
+
+  @@index([operacaoId])
+}
+
+model AtividadeResponsavel {
+  id          String    @id @default(uuid())
+  atividadeId String
+  atividade   Atividade @relation(fields: [atividadeId], references: [id])
+  usuarioId   String
+  usuario     Usuario   @relation(fields: [usuarioId], references: [id])
+  createdAt   DateTime  @default(now())
+
+  @@unique([atividadeId, usuarioId])
+}
+
+model MovimentacaoEtapa {
+  id             String      @id @default(uuid())
+  atividadeId    String
+  atividade      Atividade   @relation(fields: [atividadeId], references: [id])
+  etapaOrigemId  String?
+  etapaOrigem    EtapaFluxo? @relation("EtapaOrigem", fields: [etapaOrigemId], references: [id])
+  etapaDestinoId String?
+  etapaDestino   EtapaFluxo? @relation("EtapaDestino", fields: [etapaDestinoId], references: [id])
+  tipo           String      @default("avanco")
+  movidoPorId    String
+  movidoPor      Usuario     @relation(fields: [movidoPorId], references: [id])
+  obs            String?
+  timestamp      DateTime    @default(now())
+}
+
+model Historico {
+  id              String    @id @default(uuid())
+  atividadeId     String
+  atividade       Atividade @relation(fields: [atividadeId], references: [id])
+  usuarioId       String
+  acaoExecutada   String
+  campo           String?
+  valorAnterior   String?
+  valorNovo       String?
+  alteracaoEstado String?
+  timestamp       DateTime  @default(now())
+}
+
+model Caso {
+  id              String        @id @default(uuid())
+  operacaoId      String
+  operacao        Operacao      @relation(fields: [operacaoId], references: [id])
+  titulo          String
+  descricao       String
+  status          String        @default("aberto")
+  atividadeId     String?
+  atividade       Atividade?    @relation(fields: [atividadeId], references: [id])
+  equipeId        String?
+  equipe          Departamento? @relation(fields: [equipeId], references: [id])
+  registradoPorId String
+  registradoPor   Usuario       @relation(fields: [registradoPorId], references: [id])
+  createdAt       DateTime      @default(now())
+  anexos          Anexo[]
+
+  @@index([operacaoId])
+}
+
+model Anexo {
+  id        String   @id @default(uuid())
+  casoId    String
+  caso      Caso     @relation(fields: [casoId], references: [id])
+  nome      String
+  caminho   String
+  mime      String?
+  createdAt DateTime @default(now())
+}

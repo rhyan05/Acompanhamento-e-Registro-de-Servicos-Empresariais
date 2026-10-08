@@ -1,0 +1,32 @@
+import { prisma } from '../database/prisma.js'
+import { AppError } from './errors.js'
+
+export { operacaoPermitida } from './escopoCalculos.js'
+
+export async function operacoesAcessiveis(
+  userId: string,
+  empresaId: string,
+  nivel: string
+): Promise<{ todas: boolean; ids: string[] }> {
+  if (nivel === 'gestor') return { todas: true, ids: [] }
+  const membros = await prisma.operacaoMembro.findMany({
+    where: { usuarioId: userId, operacao: { empresaId } },
+    select: { operacaoId: true },
+  })
+  return { todas: false, ids: membros.map(m => m.operacaoId) }
+}
+
+export async function assertOperacaoDaEmpresa(operacaoId: string, empresaId: string) {
+  const operacao = await prisma.operacao.findFirst({ where: { id: operacaoId, empresaId } })
+  if (!operacao) throw new AppError('Operação não encontrada', 404)
+  return operacao
+}
+
+export async function assertAcessoOperacao(operacaoId: string, userId: string, empresaId: string, nivel: string) {
+  await assertOperacaoDaEmpresa(operacaoId, empresaId)
+  if (nivel === 'gestor') return
+  const acesso = await prisma.operacaoMembro.findUnique({
+    where: { operacaoId_usuarioId: { operacaoId, usuarioId: userId } },
+  })
+  if (!acesso) throw new AppError('Sem acesso a esta operação', 403)
+}
