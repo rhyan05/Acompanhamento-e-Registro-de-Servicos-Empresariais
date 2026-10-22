@@ -2,6 +2,9 @@ import { prisma } from '../database/prisma.js'
 import { AppError } from './errors.js'
 import { diferenciarEdicao } from './edicaoCalculos.js'
 import { assertAcessoOperacao, operacoesAcessiveis } from './acesso.js'
+import { periodoFiltro } from './periodoFiltro.js'
+import { ordenarPorPrioridade } from './ordenacaoCalculos.js'
+import { aprovacaoValida } from './aprovacaoCalculos.js'
 
 const includeCard = {
   responsavel: { select: { id: true, nome: true, email: true } },
@@ -10,7 +13,7 @@ const includeCard = {
   criadoPor: { select: { id: true, nome: true } },
   operacao: { select: { id: true, nome: true } },
   equipe: { select: { id: true, nome: true } },
-  etapaAtual: { select: { id: true, nome: true, ordem: true } },
+  etapaAtual: { select: { id: true, nome: true, ordem: true, requerAprovacao: true } },
   fluxo: { select: { id: true, nome: true } },
 }
 
@@ -72,6 +75,7 @@ export interface FiltrosAtividade {
   equipeId?: string
   fluxoId?: string
   etapaAtualId?: string
+  periodo?: string
 }
 
 export async function listarAtividades(
@@ -80,7 +84,7 @@ export async function listarAtividades(
   empresaId: string,
   filtros: FiltrosAtividade
 ) {
-  const where: any = { deletedAt: null, operacao: { empresaId } }
+  const where: any = { deletedAt: null, operacao: { empresaId }, ...periodoFiltro(filtros.periodo) }
 
   if (filtros.operacaoId) {
     await assertAcessoOperacao(filtros.operacaoId, userId, empresaId, nivel)
@@ -97,11 +101,13 @@ export async function listarAtividades(
   if (filtros.fluxoId) where.fluxoId = filtros.fluxoId
   if (filtros.etapaAtualId) where.etapaAtualId = filtros.etapaAtualId
 
-  return prisma.atividade.findMany({
+  const atividades = await prisma.atividade.findMany({
     where,
     include: includeCard,
-    orderBy: [{ prioridade: 'asc' }, { createdAt: 'desc' }],
+    orderBy: { createdAt: 'desc' },
   })
+
+  return ordenarPorPrioridade(atividades)
 }
 
 export async function buscarAtividade(id: string, empresaId: string, userId: string, nivel: string) {
@@ -209,7 +215,21 @@ export async function editarAtividade(id: string, dados: EdicaoInput, userId: st
     return prisma.atividade.findFirst({ where: { id }, include: includeCard })
   }
 
+  if (data.responsavelId) {
+    const usuario = await prisma.usuario.findFirst({ where: { id: data.responsavelId, empresaId } })
+    if (!usuario) throw new AppError('Usuário não pertence à empresa')
+  }
+
   const atividade = await prisma.atividade.update({ where: { id }, data, include: includeCard })
+
+  if (data.responsavelId) {
+    await prisma.atividadeResponsavel.upsert({
+      where: { atividadeId_usuarioId: { atividadeId: id, usuarioId: data.responsavelId } },
+      update: {},
+      create: { atividadeId: id, usuarioId: data.responsavelId },
+    })
+  }
+
   for (const log of logs) {
     await registrarHistorico(id, userId, 'edicao', log)
   }
@@ -254,6 +274,26 @@ async function moverEtapa(id: string, userId: string, empresaId: string, nivel: 
     throw new AppError('Conclua a etapa atual antes de avançar')
   }
 
+  if (direcao === 1 && atividade.etapaAtual.requerAprovacao) {
+    const aprovacao = await prisma.aprovacaoEtapa.findUnique({
+      where: {
+        atividadeId_etapaId: {
+          atividadeId: id,
+          etapaId: atividade.etapaAtual.id,
+        },
+      },
+    })
+    const entrada = await prisma.movimentacaoEtapa.findFirst({
+      where: { atividadeId: id, etapaDestinoId: atividade.etapaAtual.id },
+      orderBy: { timestamp: 'desc' },
+      select: { timestamp: true },
+    })
+    const referencia = entrada?.timestamp ?? atividade.dataInicio ?? atividade.createdAt
+    if (!aprovacaoValida(aprovacao, referencia)) {
+      throw new AppError('Esta etapa exige aprovação antes de avançar')
+    }
+  }
+
   const etapas = atividade.fluxo.etapas
   const idx = etapas.findIndex(e => e.id === atividade.etapaAtualId)
   const destino = etapas[idx + direcao]
@@ -289,6 +329,9 @@ async function moverEtapa(id: string, userId: string, empresaId: string, nivel: 
     where: { atividadeId_usuarioId: { atividadeId: id, usuarioId: responsavelId } },
     update: {},
     create: { atividadeId: id, usuarioId: responsavelId },
+  })
+  await prisma.aprovacaoEtapa.deleteMany({
+    where: { atividadeId: id, etapaId: { in: [atividade.etapaAtual.id, destino.id] } },
   })
   await registrarHistorico(id, userId, direcao === 1 ? 'avanco_etapa' : 'retorno_etapa', {
     campo: 'etapa',

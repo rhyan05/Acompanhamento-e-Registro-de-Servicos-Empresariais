@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, NavLink, Outlet } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { AuthProvider } from '../context/AuthProvider'
 import { ToastProvider } from '../context/ToastProvider'
@@ -9,6 +9,7 @@ import type { Operacao } from '../types'
 import { LoginPage } from '../pages/LoginPage'
 import { RegistroPage } from '../pages/RegistroPage'
 import { ThemeToggle } from './ThemeToggle'
+import { BrandMark } from './Brand'
 import { FullPageSpinner } from './ui/Spinner'
 import {
   LayoutDashboard,
@@ -16,11 +17,16 @@ import {
   Settings,
   LogOut,
   Building2,
-  Workflow,
   Menu,
+  Radar,
+  BookOpen,
+  ShieldCheck,
 } from 'lucide-react'
 
 const DashboardPage = lazy(() => import('../pages/DashboardPage').then(m => ({ default: m.DashboardPage })))
+const RadarPage = lazy(() => import('../pages/RadarPage').then(m => ({ default: m.RadarPage })))
+const PlaybooksPage = lazy(() => import('../pages/PlaybooksPage').then(m => ({ default: m.PlaybooksPage })))
+const AprovacoesPage = lazy(() => import('../pages/AprovacoesPage').then(m => ({ default: m.AprovacoesPage })))
 const OperacoesPage = lazy(() => import('../pages/OperacoesPage').then(m => ({ default: m.OperacoesPage })))
 const OperacaoPage = lazy(() => import('../pages/OperacaoPage').then(m => ({ default: m.OperacaoPage })))
 const EquipeKanbanPage = lazy(() => import('../pages/EquipeKanbanPage').then(m => ({ default: m.EquipeKanbanPage })))
@@ -33,17 +39,33 @@ function navClass(isActive: boolean) {
 function Sidebar({ className = '', onNavigate }: { className?: string; onNavigate?: () => void }) {
   const { usuario, logout } = useAuth()
   const [operacoes, setOperacoes] = useState<Operacao[]>([])
+  const [pendentes, setPendentes] = useState(0)
 
   useEffect(() => {
     api.operacoes.list().then(setOperacoes).catch(() => {})
   }, [])
 
+  useEffect(() => {
+    if (usuario?.nivelAcesso !== 'gestor') return
+
+    const carregar = () => {
+      api.aprovacoes
+        .pendentes()
+        .then(lista => setPendentes(lista.length))
+        .catch(() => {})
+    }
+
+    carregar()
+    window.addEventListener('aprovacoes-change', carregar)
+    return () => window.removeEventListener('aprovacoes-change', carregar)
+  }, [usuario?.nivelAcesso])
+
   return (
     <aside className={`w-64 shrink-0 bg-surface border-r border-border flex-col ${className}`}>
       <div className="p-5 border-b border-border">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-indigo-500 flex items-center justify-center shadow-soft">
-            <Workflow className="w-5 h-5 text-white" />
+          <div className="w-10 h-10 rounded-xl bg-primary-soft text-primary border border-primary/15 flex items-center justify-center">
+            <BrandMark className="w-6 h-6" />
           </div>
           <div className="min-w-0">
             <h2 className="font-bold text-sm text-content truncate">
@@ -60,6 +82,10 @@ function Sidebar({ className = '', onNavigate }: { className?: string; onNavigat
         <NavLink to="/" end className={({ isActive }) => navClass(isActive)} onClick={onNavigate}>
           <LayoutDashboard className="w-4 h-4" />
           Dashboard geral
+        </NavLink>
+        <NavLink to="/radar" className={({ isActive }) => navClass(isActive)} onClick={onNavigate}>
+          <Radar className="w-4 h-4" />
+          Radar operacional
         </NavLink>
       </div>
 
@@ -88,6 +114,17 @@ function Sidebar({ className = '', onNavigate }: { className?: string; onNavigat
             <div className="pt-4 pb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-content-subtle">
               Gestão
             </div>
+            <NavLink to="/aprovacoes" className={({ isActive }) => navClass(isActive)} onClick={onNavigate}>
+              <ShieldCheck className="w-4 h-4" />
+              Aprovações
+              {pendentes > 0 && (
+                <span className="ml-auto badge bg-pendente-soft text-pendente !px-2 !py-0">{pendentes}</span>
+              )}
+            </NavLink>
+            <NavLink to="/playbooks" className={({ isActive }) => navClass(isActive)} onClick={onNavigate}>
+              <BookOpen className="w-4 h-4" />
+              Playbooks
+            </NavLink>
             <NavLink to="/admin" className={({ isActive }) => navClass(isActive)} onClick={onNavigate}>
               <Settings className="w-4 h-4" />
               Administração
@@ -126,8 +163,8 @@ function MobileTopBar({ onMenu }: { onMenu: () => void }) {
         <button className="btn-icon" onClick={onMenu} aria-label="Abrir menu">
           <Menu className="w-5 h-5" />
         </button>
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-indigo-500 flex items-center justify-center shrink-0">
-          <Workflow className="w-4 h-4 text-white" />
+        <div className="w-8 h-8 rounded-lg bg-primary-soft text-primary border border-primary/15 flex items-center justify-center shrink-0">
+          <BrandMark className="w-5 h-5" />
         </div>
         <span className="font-semibold text-sm truncate">{usuario?.empresa?.nome ?? 'Organizador'}</span>
       </div>
@@ -145,6 +182,7 @@ function RequireGestor({ children }: { children: ReactNode }) {
 function ProtectedLayout() {
   const { usuario } = useAuth()
   const [menu, setMenu] = useState(false)
+  const location = useLocation()
 
   if (!usuario) return <Navigate to="/login" replace />
 
@@ -154,7 +192,7 @@ function ProtectedLayout() {
 
       {menu && (
         <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm animate-fade-in" onClick={() => setMenu(false)} />
+          <div className="absolute inset-0 bg-[#12130b]/60 backdrop-blur-sm animate-fade-in" onClick={() => setMenu(false)} />
           <div className="absolute left-0 top-0 h-full animate-fade-in">
             <Sidebar className="flex h-full" onNavigate={() => setMenu(false)} />
           </div>
@@ -164,9 +202,11 @@ function ProtectedLayout() {
       <div className="flex-1 min-w-0 flex flex-col">
         <MobileTopBar onMenu={() => setMenu(true)} />
         <main className="flex-1 overflow-auto">
-          <Suspense fallback={<FullPageSpinner />}>
-            <Outlet />
-          </Suspense>
+          <div key={location.pathname} className="h-full animate-page-in">
+            <Suspense fallback={<FullPageSpinner />}>
+              <Outlet />
+            </Suspense>
+          </div>
         </main>
       </div>
     </div>
@@ -184,9 +224,12 @@ export function AppRoutes() {
               <Route path="/register" element={<RegistroPage />} />
               <Route element={<ProtectedLayout />}>
                 <Route index element={<DashboardPage />} />
+                <Route path="radar" element={<RadarPage />} />
                 <Route path="operacoes" element={<OperacoesPage />} />
                 <Route path="operacoes/:operacaoId" element={<OperacaoPage />} />
                 <Route path="operacoes/:operacaoId/equipes/:equipeId" element={<EquipeKanbanPage />} />
+                <Route path="aprovacoes" element={<RequireGestor><AprovacoesPage /></RequireGestor>} />
+                <Route path="playbooks" element={<RequireGestor><PlaybooksPage /></RequireGestor>} />
                 <Route path="admin" element={<RequireGestor><AdminPage /></RequireGestor>} />
               </Route>
               <Route path="*" element={<Navigate to="/" replace />} />

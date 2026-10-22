@@ -48,6 +48,7 @@ export interface EtapaFluxo {
   nome: string
   ordem: number
   equipeId: string
+  requerAprovacao?: boolean
   equipe?: { id: string; nome: string }
 }
 
@@ -129,7 +130,7 @@ export interface Atividade {
   fluxoId?: string | null
   fluxo?: { id: string; nome: string; etapas?: EtapaFluxo[] } | null
   etapaAtualId?: string | null
-  etapaAtual?: { id: string; nome: string; ordem: number } | null
+  etapaAtual?: { id: string; nome: string; ordem: number; requerAprovacao?: boolean } | null
   status: StatusAtividade
   prioridade: Prioridade
   prazoEstimado?: string | null
@@ -153,7 +154,7 @@ export interface Metricas {
   tmaMedio: number
   porStatus: { status: string; count: number }[]
   porPrioridade: { prioridade: string; count: number }[]
-  carga: { responsavel: string; equipe: string; quantidade: number }[]
+  carga: { responsavelId: string; responsavel: string; equipe: string; quantidade: number }[]
   cargaPorEquipe: { equipe: string; quantidade: number }[]
   retrabalho: number
 }
@@ -180,4 +181,190 @@ export interface AndamentoFluxo {
 export interface Andamento {
   porEquipe: AndamentoEquipe[]
   porFluxo: AndamentoFluxo[]
+}
+
+export interface EtapaAnalytics {
+  etapaId: string
+  etapa: string
+  ordem: number
+  equipe: string
+  wip: number
+  concluidas: number
+  bloqueadas: number
+  tempoMedioHoras: number
+  tempoMaxHoras: number
+  porEquipe: { equipe: string; wip: number; tempoMedioHoras: number }[]
+}
+
+export interface FluxoAnalytics {
+  fluxoId: string
+  fluxo: string
+  operacaoId: string
+  operacao: string
+  total: number
+  concluidas: number
+  progresso: number
+  etapas: EtapaAnalytics[]
+}
+
+export interface CardParado {
+  id: string
+  titulo: string
+  responsavel: string
+  prazoEstimado: string | null
+  horasNaEtapa: number
+  status: StatusAtividade
+}
+
+export interface Gargalo {
+  fluxoId: string
+  fluxo: string
+  operacaoId: string
+  operacao: string
+  etapaId: string
+  etapa: string
+  equipe: string
+  wip: number
+  bloqueadas: number
+  tempoMedioHoras: number
+  tempoMaxHoras: number
+  cardsParados: CardParado[]
+}
+
+export interface FluxoAnalyticsResponse {
+  fluxos: FluxoAnalytics[]
+  gargalos: Gargalo[]
+  geradoEm: string
+}
+
+export interface SeriePonto {
+  rotulo: string
+  criadas: number
+  concluidas: number
+}
+
+export interface SerieAnalytics {
+  pontos: SeriePonto[]
+  totalCriadas: number
+  totalConcluidas: number
+  leadTimeMedioDias: number
+  wipAtual: number
+  bloqueadas: number
+  geradoEm: string
+}
+
+export type NivelRisco = 'critico' | 'alto' | 'medio' | 'baixo'
+
+export interface SugestaoResponsavel {
+  usuarioId: string
+  nome: string
+  cargaAtual: number
+  cargaSugerida: number
+}
+
+export interface ItemRadar {
+  id: string
+  titulo: string
+  operacaoId: string
+  operacao: string
+  fluxo: string | null
+  etapa: string | null
+  equipe: string | null
+  responsavelId: string
+  responsavel: string
+  status: StatusAtividade
+  prioridade: Prioridade
+  prazoEstimado: string | null
+  horasNaEtapa: number
+  score: number
+  nivel: NivelRisco
+  motivos: string[]
+  sugestao: SugestaoResponsavel | null
+}
+
+export interface RadarResponse {
+  itens: ItemRadar[]
+  geradoEm: string
+}
+
+export interface ResumoRadar {
+  total: number
+  criticas: number
+  altas: number
+  medias: number
+  vencidas: number
+  bloqueadas: number
+  sugestoes: number
+  gargalo: { etapa: string; fluxo: string; tempoMedioHoras: number } | null
+  texto: string
+  iaDisponivel: boolean
+  geradoEm: string
+}
+
+export interface ResumoIARadar {
+  texto: string
+  fonte: 'ia' | 'deterministico'
+  iaDisponivel: boolean
+}
+
+export interface PlaybookItem {
+  id: string
+  playbookId: string
+  titulo: string
+  descricao?: string | null
+  prioridade: Prioridade
+  equipeId?: string | null
+  equipe?: { id: string; nome: string } | null
+  etapaId?: string | null
+  etapa?: {
+    id: string
+    nome: string
+    ordem: number
+    equipeId: string
+    equipe?: { id: string; nome: string } | null
+    fluxo?: { id: string; nome: string } | null
+  } | null
+  offsetDias: number
+  ordem: number
+}
+
+export interface Playbook {
+  id: string
+  empresaId: string
+  operacaoId?: string | null
+  operacao?: { id: string; nome: string } | null
+  nome: string
+  descricao?: string | null
+  criadoPorId: string
+  frequencia?: 'diaria' | 'semanal' | 'mensal' | null
+  proximaEm?: string | null
+  ultimaEm?: string | null
+  ativa: boolean
+  itens: PlaybookItem[]
+  createdAt: string
+}
+
+export type StatusAprovacao = 'pendente' | 'aprovada' | 'rejeitada'
+
+export interface AprovacaoEtapa {
+  id: string
+  atividadeId: string
+  etapaId: string
+  status: StatusAprovacao
+  etapa?: { id: string; nome: string; ordem: number; requerAprovacao: boolean }
+  solicitadoPor?: { id: string; nome: string }
+  decididoPor?: { id: string; nome: string } | null
+  comentario?: string | null
+  createdAt: string
+  decididoEm?: string | null
+}
+
+export interface AprovacaoPendente extends AprovacaoEtapa {
+  atividade?: {
+    id: string
+    titulo: string
+    operacao?: { id: string; nome: string }
+    etapaAtual?: { id: string; nome: string; ordem: number } | null
+    responsavel?: { id: string; nome: string }
+  }
 }
