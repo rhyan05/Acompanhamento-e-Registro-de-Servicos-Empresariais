@@ -1,0 +1,166 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------------------------------------------------------------
+   Tokens de tema (claro / escuro) — mesma identidade do app
+   --------------------------------------------------------------- */
+:root {
+  --background: #f4f6fb;
+  --surface: #ffffff;
+  --surface-muted: #f1f4fa;
+  --border: #e2e8f0;
+  --content: #0f172a;
+  --content-muted: #64748b;
+  --content-subtle: #94a3b8;
+
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-soft: #eef4ff;
+  --on-primary: #ffffff;
+
+  --sh-soft: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --sh-card: 0 6px 24px -10px rgba(15, 23, 42, 0.16);
+  --sh-pop: 0 24px 48px -16px rgba(15, 23, 42, 0.28);
+
+  --pendente: #92610a;      --pendente-soft: #fef7c3;
+  --execucao: #1d4ed8;      --execucao-soft: #dbeafe;
+  --revisao: #6d28d9;       --revisao-soft: #ede9fe;
+  --concluido: #15803d;     --concluido-soft: #dcfce7;
+  --bloqueado: #b91c1c;     --bloqueado-soft: #fee2e2;
+}
+
+.dark {
+  --background: #0a0f1c;
+  --surface: #121a2b;
+  --surface-muted: #182135;
+  --border: #26324a;
+  --content: #e8edf7;
+  --content-muted: #93a1bd;
+  --content-subtle: #64748b;
+
+  --primary: #3b82f6;
+  --primary-hover: #60a5fa;
+  --primary-soft: rgba(59, 130, 246, 0.14);
+  --on-primary: #ffffff;
+
+  --sh-soft: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --sh-card: 0 8px 28px -12px rgba(0, 0, 0, 0.55);
+  --sh-pop: 0 28px 56px -18px rgba(0, 0, 0, 0.7);
+
+  --pendente: #fcd34d;      --pendente-soft: rgba(234, 179, 8, 0.16);
+  --execucao: #93c5fd;      --execucao-soft: rgba(59, 130, 246, 0.18);
+  --revisao: #d8b4fe;       --revisao-soft: rgba(168, 85, 247, 0.18);
+  --concluido: #86efac;     --concluido-soft: rgba(34, 197, 94, 0.16);
+  --bloqueado: #fca5a5;     --bloqueado-soft: rgba(239, 68, 68, 0.18);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
+  --color-content: var(--content);
+  --color-content-muted: var(--content-muted);
+  --color-content-subtle: var(--content-subtle);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-on-primary: var(--on-primary);
+
+  --color-pendente: var(--pendente);
+  --color-pendente-soft: var(--pendente-soft);
+  --color-execucao: var(--execucao);
+  --color-execucao-soft: var(--execucao-soft);
+  --color-revisao: var(--revisao);
+  --color-revisao-soft: var(--revisao-soft);
+  --color-concluido: var(--concluido);
+  --color-concluido-soft: var(--concluido-soft);
+  --color-bloqueado: var(--bloqueado);
+  --color-bloqueado-soft: var(--bloqueado-soft);
+
+  --shadow-soft: var(--sh-soft);
+  --shadow-card: var(--sh-card);
+  --shadow-pop: var(--sh-pop);
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --animate-fade-in: fade-in 0.2s ease-out both;
+  --animate-slide-up: slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+    scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-background text-content font-sans antialiased;
+    margin: 0;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--primary) 28%, transparent);
+  }
+}
+
+@layer components {
+  .container-x {
+    @apply mx-auto w-full max-w-6xl px-5 sm:px-8;
+  }
+  .card {
+    @apply bg-surface border border-border rounded-2xl shadow-soft;
+  }
+  .card-hover {
+    @apply transition duration-200 hover:-translate-y-1 hover:shadow-card hover:border-primary/40;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold
+      border border-transparent transition duration-150 outline-none
+      focus-visible:ring-2 focus-visible:ring-primary/40;
+  }
+  .btn-primary {
+    @apply bg-primary text-on-primary hover:bg-primary-hover shadow-card;
+  }
+  .btn-secondary {
+    @apply bg-surface border-border text-content hover:bg-surface-muted;
+  }
+  .eyebrow {
+    @apply inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1
+      text-xs font-semibold uppercase tracking-wider text-content-muted;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    background: linear-gradient(100deg, var(--primary), #7c3aed 60%, #a855f7);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .hero-glow {
+    background:
+      radial-gradient(60% 60% at 15% 0%, color-mix(in srgb, var(--primary) 22%, transparent), transparent 70%),
+      radial-gradient(50% 50% at 90% 10%, rgba(168, 85, 247, 0.18), transparent 70%);
+  }
+  .grid-bg {
+    background-image:
+      linear-gradient(to right, color-mix(in srgb, var(--border) 70%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in srgb, var(--border) 70%, transparent) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(70% 60% at 50% 0%, black, transparent 85%);
+  }
+}
